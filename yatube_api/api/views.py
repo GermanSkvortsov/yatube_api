@@ -1,11 +1,11 @@
 """ViewSets для API Yatube."""
 
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, permissions, viewsets
+from rest_framework import filters, mixins, permissions, viewsets
 
-from posts.models import Comment, Follow, Group, Post
+from posts.models import Group, Post
 from .pagination import SmartPagination
-from .permissions import IsAuthorOrReadOnly, IsAuthenticatedForFollow
+from .permissions import IsAuthenticatedAuthorOrReadOnly
 from .serializers import (
     CommentSerializer,
     FollowSerializer,
@@ -19,32 +19,29 @@ class PostViewSet(viewsets.ModelViewSet):
 
     queryset = Post.objects.all()
     serializer_class = PostSerializer
-    permission_classes = [IsAuthorOrReadOnly]
+    permission_classes = [IsAuthenticatedAuthorOrReadOnly]
     pagination_class = SmartPagination
 
     def perform_create(self, serializer):
-        """Автоматически подставляем автора при создании поста."""
         serializer.save(author=self.request.user)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
     """ViewSet для работы с комментариями."""
+
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthorOrReadOnly]
-    pagination_class = SmartPagination
+    permission_classes = [IsAuthenticatedAuthorOrReadOnly]
+
+    def get_post(self):
+        post_pk = self.kwargs.get('post_pk')
+        return get_object_or_404(Post, id=post_pk)
 
     def get_queryset(self):
-        """Фильтруем комментарии по post_id из URL."""
-        post_id = self.kwargs.get('post_id')
-        post = get_object_or_404(Post, id=post_id)
-        return Comment.objects.filter(post=post)
+        post = self.get_post()
+        return post.comments.all()  # type: ignore
 
     def perform_create(self, serializer):
-        """
-        Автоматически подставляем автора и пост при создании комментария.
-        """
-        post_id = self.kwargs.get('post_id')
-        post = get_object_or_404(Post, id=post_id)
+        post = self.get_post()
         serializer.save(author=self.request.user, post=post)
 
 
@@ -54,22 +51,20 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = [permissions.AllowAny]
-    pagination_class = SmartPagination
 
 
-class FollowViewSet(viewsets.ModelViewSet):
-    """ViewSet для работы с подписками."""
+class FollowViewSet(mixins.ListModelMixin,
+                    mixins.CreateModelMixin,
+                    viewsets.GenericViewSet):
+    """ViewSet для работы с подписками (только GET и POST)."""
 
     serializer_class = FollowSerializer
-    permission_classes = [IsAuthenticatedForFollow]
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['following__username']
-    pagination_class = SmartPagination
 
     def get_queryset(self):
-        """Возвращаем только подписки текущего пользователя."""
-        return Follow.objects.filter(user=self.request.user)
+        return self.request.user.follower.all()  # type: ignore
 
     def perform_create(self, serializer):
-        """Автоматически подставляем пользователя при создании подписки."""
         serializer.save(user=self.request.user)

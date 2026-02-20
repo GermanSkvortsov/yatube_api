@@ -3,32 +3,30 @@
 from rest_framework import permissions
 
 
-class IsAuthorOrReadOnly(permissions.BasePermission):
+class IsAuthenticatedAuthorOrReadOnly(permissions.BasePermission):
     """
-    Разрешение на уровне запроса и объекта.
-
     - Безопасные методы (GET, HEAD, OPTIONS) разрешены всем.
-    - Для остальных методов требуется аутентификация.
-    - Для объектов дополнительно проверяется авторство.
+    - Для остальных методов требуется аутентификация и авторство.
     """
 
     def has_permission(self, request, view):
         """Проверка прав на уровне запроса."""
-        if request.method in permissions.SAFE_METHODS:
-            return True
-        return request.user and request.user.is_authenticated
+        return (
+            request.method in permissions.SAFE_METHODS
+            or request.user and request.user.is_authenticated
+        )
 
     def has_object_permission(self, request, view, obj):
         """Проверка прав на уровне конкретного объекта."""
-        if request.method in permissions.SAFE_METHODS:
-            return True
-        return obj.author == request.user
+        return (
+            request.method in permissions.SAFE_METHODS
+            or obj.author == request.user
+        )
 
 
 class IsAuthenticatedForFollow(permissions.BasePermission):
     """
     Разрешение для эндпоинта /follow/.
-
     Доступ только для аутентифицированных пользователей.
     """
 
