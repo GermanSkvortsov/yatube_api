@@ -203,7 +203,8 @@ api-final-yatube/
 │   ├── permissions.py      # кастомные права доступа
 │   ├── serializers.py      # сериализаторы
 │   ├── urls.py             # маршруты API
-│   └── views.py            # вьюсеты
+│   ├── views.py            # вьюсеты
+│   └── viewsets.py         # базовые классы вьюсетов
 ├── posts/                  # приложение с моделями
 │   ├── models.py           # модели Post, Comment, Group, Follow
 │   └── migrations/         # миграции БД

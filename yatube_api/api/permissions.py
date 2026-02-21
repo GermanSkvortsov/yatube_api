@@ -22,14 +22,3 @@ class IsAuthenticatedAuthorOrReadOnly(permissions.BasePermission):
             request.method in permissions.SAFE_METHODS
             or obj.author == request.user
         )
-
-
-class IsAuthenticatedForFollow(permissions.BasePermission):
-    """
-    Разрешение для эндпоинта /follow/.
-    Доступ только для аутентифицированных пользователей.
-    """
-
-    def has_permission(self, request, view):
-        """Проверка аутентификации для доступа к подпискам."""
-        return request.user and request.user.is_authenticated

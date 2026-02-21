@@ -49,12 +49,16 @@ class GroupSerializer(serializers.ModelSerializer):
 class FollowSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Follow."""
 
+    # Для ответа — username (требование ТЗ)
     user = serializers.SlugRelatedField(
         read_only=True,
         slug_field='username'
     )
+
+    # Для валидации — текущий пользователь из токена
     user_id = serializers.HiddenField(
-        default=serializers.CurrentUserDefault()
+        default=serializers.CurrentUserDefault(),
+        source='user'  # поле модели
     )
     following = serializers.SlugRelatedField(
         slug_field='username',
@@ -78,9 +82,3 @@ class FollowSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Нельзя подписаться на самого себя')
         return value
-
-    def create(self, validated_data):
-        """Создание подписки с текущим пользователем."""
-        validated_data.pop('user_id', None)
-        validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)
